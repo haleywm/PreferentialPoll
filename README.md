@@ -17,3 +17,38 @@ Poller is the front end, which allows people to create new polls, allows them to
 ### Teller
 
 Teller is a back end application which actually implements the counting of a preferential vote. Teller is a command line application which takes arguments for what to process, and prints the results in json over stdout, to make it easily fit into a front end as required.
+
+## Input Data
+
+Both Poller and Teller use a pair of two files to store data about individual elections, `config.json`, and `votes.csv`. While running, Poller will produce a `Polls` folder in the working directory, and will create a folder for each new poll, which will be used to store each pair of files. `config.json` is a json file specifying the parameters of the vote, while `votes.csv` should be a csv file simply containing a list of votes in order.
+
+`config.json` format:
+
+```JSON
+{
+    # The minimum number of preferences a voter must provide
+    # A negative value, or a value greater than or equal to number of candidates
+    # requires all candidates to be preferenced
+    "minimum_preferences": int,
+    # Number of winners of the election
+    # Should be at least 1
+    "winner_amount": int,
+    # A list of candidates, containing their ID and name
+    # Note that only the ID is used by Teller
+    "candidates": [
+        [candidate_id: int, candidate_name: str, candidate_description: str],
+        ...
+    ],
+    # If the order of votes should be randomised every time a polling card is displayed
+    "randomise_order": bool
+}
+```
+
+`votes.csv` should be a CSV file, where each line is a list of preferences, formatted as candidate IDs in the order preferenced in that vote, i.e.
+
+```CSV
+1,2,3,4,5,6
+3,4,2,1,3,6
+3,4,2,1,3,6
+3,6,2,4,1,5
+```
