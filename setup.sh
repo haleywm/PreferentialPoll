@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Create venv
-if [ -d "venv" ]; then
+if [ ! -d "venv" ]; then
     python -m venv venv
 fi
 
