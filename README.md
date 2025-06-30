@@ -4,7 +4,7 @@ A project by Haley.
 
 The goal of this project is to make a simple system that lets a website run straw-poll style internet polls, but using a proper implementation of preferential voting.
 
-I'm working on this because I was unable to find any other implementations online that I liked. The ones that I could find were highly critical of the preferential voting system, which I disagree with, and had a very limited implementation, which had a short number of maximum parties. I want to make something which lets people host a customisable implementation of preferential voting, with options for partial votes (such as allowing people to give a minimum of 6 preferences rather than ranking all options), or voting for multiple candidates (choosing the top 3 most popular candidates). It would also be nice to show some fun graphics about how the vote was calculated, however I'll likely leave that until after the initial proof of concept is complete.
+I'm working on this because I was unable to find any other implementations online that I liked. The ones that I could find were highly critical of the preferential voting system, which I disagree with, and had a very limited implementation, which had a short number of maximum parties. I want to make something which lets people host a customizable implementation of preferential voting, with options for partial votes (such as allowing people to give a minimum of 6 preferences rather than ranking all options), or voting for multiple candidates (choosing the top 3 most popular candidates). It would also be nice to show some fun graphics about how the vote was calculated, however I'll likely leave that until after the initial proof of concept is complete.
 
 ## Program Structure
 
@@ -27,16 +27,15 @@ Both Poller and Teller use a pair of two files to store data about individual el
 ```JSON
 {
     # The minimum number of preferences a voter must provide
-    # A negative value, or a value greater than or equal to number of candidates
+    # A zero, a negative value, or a value greater than or equal to number of candidates
     # requires all candidates to be preferenced
     "minimum_preferences": int,
     # Number of winners of the election
     # Should be at least 1
     "winner_amount": int,
-    # A list of candidates, containing their ID and name
-    # Note that only the ID is used by Teller
+    # A list of candidates, containing their name and description
     "candidates": [
-        [candidate_id: int, candidate_name: str, candidate_description: str],
+        [candidate_name: str, candidate_description: str],
         ...
     ],
     # If the order of votes should be randomised every time a polling card is displayed
@@ -44,11 +43,11 @@ Both Poller and Teller use a pair of two files to store data about individual el
 }
 ```
 
-`votes.csv` should be a CSV file, where each line is a list of preferences, formatted as candidate IDs in the order preferenced in that vote, i.e.
+`votes.csv` should be a CSV file, where each line is a list of preferences, formatted as candidate indexes (as listed in the candidates list) in the order preferenced in that vote, i.e.
 
 ```CSV
-1,2,3,4,5,6
-3,4,2,1,3,6
-3,4,2,1,3,6
-3,6,2,4,1,5
+0,1,2,3,4,5
+2,3,1,0,4,5
+2,3,1,0,2,5
+2,5,1,3,0,4
 ```
