@@ -1,10 +1,14 @@
-from typing import TypedDict
+from typing import TypedDict, TextIO
+import json
 
 
 class ConfigData(TypedDict):
-    pass
+    minimum_preferences: int
+    winner_amount: int
+    candidates: list[list[str]]
+    randomise_order: bool
 
 
-class PollConfig:
-    def __init__(self, input: ConfigData):
-        pass
+def read_config(fp: TextIO) -> ConfigData:
+    result: ConfigData = json.load(fp)
+    return result
