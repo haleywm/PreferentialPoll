@@ -1,12 +1,12 @@
 from typing import TextIO
 
 vote = tuple[int, ...]
-vote_count = dict[vote, int]
+vote_count = dict[vote, list[int | float]]
 
 
 def parse_vote_file(fp: TextIO) -> vote_count:
     # Create new count of votes
-    counted_votes = dict()
+    counted_votes: vote_count = dict()
     # Iterate over each line
     for line in fp:
         line = line.strip()
@@ -23,7 +23,7 @@ def parse_vote_file(fp: TextIO) -> vote_count:
             # Get how many votes match this particular vote,
             # Defaulting to 0 if this vote hasn't been seen before
             # Then add 1 and add it to the vote register
-            cur_votes = counted_votes.get(votes, 0)
-            counted_votes[votes] = cur_votes + 1
+            cur_votes = counted_votes.get(votes, [0, 1.0])
+            cur_votes[0] += 1
 
     return counted_votes
