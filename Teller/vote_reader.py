@@ -25,5 +25,6 @@ def parse_vote_file(fp: TextIO) -> vote_count:
             # Then add 1 and add it to the vote register
             cur_votes = counted_votes.get(votes, [0, 1.0])
             cur_votes[0] += 1
+            counted_votes[votes] = cur_votes
 
     return counted_votes

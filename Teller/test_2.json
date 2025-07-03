@@ -1,0 +1,13 @@
+{
+    "minimum_preferences": 0,
+    "winner_amount": 2,
+    "candidates": [
+        ["Fluffybuns", "The Fluffybun party"],
+        ["Hardbottoms", "The Hardbottom party"],
+        ["Squishyfaces", "The Squishyface party"],
+        ["Gloopies", "The Gloopy party"],
+        ["Crunchies", "The Crunchy party"],
+        ["Evil", "The Evil party"]
+    ],
+    "randomise_order": false
+}

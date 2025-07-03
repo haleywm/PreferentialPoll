@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 from typing import Optional, Any
 import json
+import time
 from poll_config import ConfigData, read_config
 from vote_reader import parse_vote_file, vote_count, vote
 from errors import VoteError
@@ -21,6 +22,7 @@ def main() -> None:
 
     parser.add_argument(
         "--ignore-invalid-votes",
+        "-i",
         action="store_true",
         help="If invalid votes should raise an error, or if they should be simply discarded.",
     )
@@ -41,13 +43,9 @@ def main() -> None:
     with open(vote_file) as fp:
         votes = parse_vote_file(fp)
 
-    election_results = count_votes(votes, config, args.ignore_invalid_votes)
+    election_results = count_votes(votes, config, not args.ignore_invalid_votes)
 
     print(json.dumps(election_results))
-
-
-if __name__ == "__main__":
-    main()
 
 
 def count_votes(
@@ -56,6 +54,8 @@ def count_votes(
     # See ALGORITHM.md to see the logic + algo here
     winners: set[int] = set()
     excluded: set[int] = set()
+
+    assert len(votes) > 0, "No votes!"
 
     # Count total votes
     total_votes: int = 0
@@ -104,6 +104,7 @@ def count_votes(
             invalid_votes.append(vote_preferences)
             skip_vote = True
 
+        votes_seen = set()
         for vote_index in vote_preferences:
             if vote_index < 0 or vote_index >= candidate_count:
                 if raise_vote_error:
@@ -112,6 +113,14 @@ def count_votes(
                     )
                 invalid_votes.append(vote_preferences)
                 skip_vote = True
+            if vote_index in votes_seen:
+                if raise_vote_error:
+                    raise VoteError(
+                        f"Vote contains multiple of the same preference: {vote_preferences}"
+                    )
+                invalid_votes.append(vote_preferences)
+                skip_vote = True
+            votes_seen.add(vote_index)
 
         if not skip_vote:
             # Get the first vote in the preference list
@@ -125,6 +134,8 @@ def count_votes(
     # Filtering out votes marked invalid
     for to_remove in invalid_votes:
         del votes[to_remove]
+
+    print(f"{votes=}")
 
     # Done counting first preferences, now to go through and select a winner!
     while len(winners) < config["winner_amount"]:
@@ -142,7 +153,7 @@ def count_votes(
                     break
 
         # Next, find the most voted for candidate
-        max_votes, max_vote_index = minmax_voted_candidate(current_votes, True)
+        max_votes, max_vote_index = max_voted_candidate(current_votes)
 
         # Seeing if they win
         if max_votes >= quota:
@@ -159,11 +170,18 @@ def count_votes(
 
             # Now add the winner to the excluded list for future votes
             excluded.add(max_vote_index)
+            print(f"{max_vote_index} won with {max_votes} votes!")
         else:
             # Nobody won, removing the least voted candidate
-            _, min_vote_index = minmax_voted_candidate(current_votes, False)
-            excluded.add(min_vote_index)
+            min_votes, min_vote_indexes = min_voted_candidates(current_votes, excluded)
+            excluded.update(min_vote_indexes)
+            print(
+                f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
+            )
 
+        print(f"{winners=}")
+        print(f"{excluded=}")
+        # time.sleep(1)
         # TODO: Check for edge cases
         # (Ties when there shouldn't be one)
         # Current algorithm shouldn't hang as I'm always excluding
@@ -193,17 +211,37 @@ def apply_mult_for_candidate(
                 break
 
 
-def minmax_voted_candidate(vote_list: list[int], most: bool) -> tuple[int, int]:
-    min_votes: Optional[int] = None
-    min_vote_index: Optional[int] = None
+def max_voted_candidate(vote_list: list[int]) -> tuple[int, int]:
+    max_votes: Optional[int] = None
+    max_vote_index: Optional[int] = None
     for index, vote_count in enumerate(vote_list):
-        if min_votes is None or (
-            most and vote_count > min_votes or not most and vote_count < min_votes
-        ):
-            min_votes = vote_count
-            min_vote_index = index
+        if max_votes is None or vote_count > max_votes:
+            max_votes = vote_count
+            max_vote_index = index
+
+    # Keeping type checker happy
+    assert max_votes is not None
+    assert max_vote_index is not None
+    return max_votes, max_vote_index
+
+
+def min_voted_candidates(
+    vote_list: list[int], excluded: set[int]
+) -> tuple[int, list[int]]:
+    min_votes: Optional[int] = None
+    min_vote_indexes: list[int] = []
+    for index, vote_count in enumerate(vote_list):
+        if index not in excluded:
+            if min_votes is None or vote_count < min_votes:
+                min_votes = vote_count
+                min_vote_indexes = [index]
+            elif vote_count == min_votes:
+                min_vote_indexes.append(index)
 
     # Keeping type checker happy
     assert min_votes is not None
-    assert min_vote_index is not None
-    return min_votes, min_vote_index
+    return min_votes, min_vote_indexes
+
+
+if __name__ == "__main__":
+    main()
