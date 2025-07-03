@@ -26,6 +26,12 @@ def main() -> None:
         action="store_true",
         help="If invalid votes should raise an error, or if they should be simply discarded.",
     )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Print data.",
+    )
 
     args = parser.parse_args()
 
@@ -136,27 +142,24 @@ def count_votes(
         del votes[to_remove]
 
     print(f"{votes=}")
+    print(f"{quota=}")
 
     # Done counting first preferences, now to go through and select a winner!
     while len(winners) < config["winner_amount"]:
-        current_votes: list[int] = [0] * candidate_count
+        current_votes: list[float] = [0.0] * candidate_count
         for vote_preferences, vote_amounts in votes.items():
             # Find first un-eliminated preference
             for possible_pref in vote_preferences:
                 if possible_pref not in excluded:
                     # Found one!
-                    # As we're multiplying an int by a float and casting back to int
-                    # Add a small number to prevent floating point muckiness
-                    current_votes[possible_pref] += int(
-                        vote_amounts[0] * vote_amounts[1] + small_additive
-                    )
+                    current_votes[possible_pref] += vote_amounts[0] * vote_amounts[1]
                     break
 
         # Next, find the most voted for candidate
         max_votes, max_vote_index = max_voted_candidate(current_votes)
 
         # Seeing if they win
-        if max_votes >= quota:
+        if max_votes + small_additive >= quota:
             # Ding ding ding! We have a winner!
             winners.add(max_vote_index)
 
@@ -178,6 +181,8 @@ def count_votes(
             print(
                 f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
             )
+
+        print(f"{votes=}")
 
         print(f"{winners=}")
         print(f"{excluded=}")
@@ -211,8 +216,8 @@ def apply_mult_for_candidate(
                 break
 
 
-def max_voted_candidate(vote_list: list[int]) -> tuple[int, int]:
-    max_votes: Optional[int] = None
+def max_voted_candidate(vote_list: list[float]) -> tuple[float, int]:
+    max_votes: Optional[float] = None
     max_vote_index: Optional[int] = None
     for index, vote_count in enumerate(vote_list):
         if max_votes is None or vote_count > max_votes:
@@ -226,9 +231,9 @@ def max_voted_candidate(vote_list: list[int]) -> tuple[int, int]:
 
 
 def min_voted_candidates(
-    vote_list: list[int], excluded: set[int]
-) -> tuple[int, list[int]]:
-    min_votes: Optional[int] = None
+    vote_list: list[float], excluded: set[int]
+) -> tuple[float, list[int]]:
+    min_votes: Optional[float] = None
     min_vote_indexes: list[int] = []
     for index, vote_count in enumerate(vote_list):
         if index not in excluded:
