@@ -59,6 +59,7 @@ def count_votes(
 ) -> dict[Any, Any]:
     # See ALGORITHM.md to see the logic + algo here
     winners: set[int] = set()
+    tied_winners: list[int] = list()
     excluded: set[int] = set()
 
     assert len(votes) > 0, "No votes!"
@@ -145,7 +146,8 @@ def count_votes(
     print(f"{quota=}")
 
     # Done counting first preferences, now to go through and select a winner!
-    while len(winners) < config["winner_amount"]:
+    # Keep going until we have enough winners, or a tie is found
+    while len(winners) < config["winner_amount"] and len(tied_winners) == 0:
         current_votes: list[float] = [0.0] * candidate_count
         for vote_preferences, vote_amounts in votes.items():
             # Find first un-eliminated preference
@@ -156,24 +158,29 @@ def count_votes(
                     break
 
         # Next, find the most voted for candidate
-        max_votes, max_vote_index = max_voted_candidate(current_votes)
+        max_votes, max_vote_indexes = max_voted_candidates(current_votes, excluded)
 
         # Seeing if they win
         if max_votes + small_additive >= quota:
             # Ding ding ding! We have a winner!
-            winners.add(max_vote_index)
+            # See how many winners
+            if len(max_vote_indexes) <= config["winner_amount"] - len(winners):
+                # A good number of winners!
+                winners.update(max_vote_indexes)
+                # If there are more winners needed, lets exclude the candidate
+                # And add transfer multipliers
+                if len(winners) < config["winner_amount"]:
+                    transfer_value: float = (max_votes - quota) / max_votes
+                    apply_mult_for_candidate(
+                        votes, transfer_value, max_vote_indexes, excluded
+                    )
 
-            # If there are more winners needed, lets exclude the candidate
-            # And add transfer multipliers
-            if len(winners) < config["winner_amount"]:
-                transfer_value: float = (max_votes - quota) / max_votes
-                apply_mult_for_candidate(
-                    votes, transfer_value, max_vote_index, excluded
-                )
-
-            # Now add the winner to the excluded list for future votes
-            excluded.add(max_vote_index)
-            print(f"{max_vote_index} won with {max_votes} votes!")
+                # Now add the winner to the excluded list for future votes
+                excluded.update(max_vote_indexes)
+                print(f"{max_vote_indexes} won with {max_votes} votes!")
+            else:
+                # Uh oh! Too many winners! This results in a tie
+                tied_winners.extend(max_vote_indexes)
         else:
             # Nobody won, removing the least voted candidate
             min_votes, min_vote_indexes = min_voted_candidates(current_votes, excluded)
@@ -195,18 +202,21 @@ def count_votes(
     # By this point we have a list of winners
     return {
         "winners": list(winners),
-        "tied_winners": [],
+        "tied_winners": tied_winners,
         "first_preferences": first_preferences,
     }
 
 
 def apply_mult_for_candidate(
-    votes: vote_count, transfer_mult: float, target_candidate: int, excluded: set[int]
+    votes: vote_count,
+    transfer_mult: float,
+    target_candidates: list[int],
+    excluded: set[int],
 ) -> None:
     for vote_preferences, vote_amounts in votes.items():
         # Find first un-eliminated preference
         for possible_pref in vote_preferences:
-            if possible_pref == target_candidate:
+            if possible_pref in target_candidates:
                 # Found one!
                 # Multiplying the vote multiplier by the transfer value
                 vote_amounts[1] *= transfer_mult
@@ -216,18 +226,22 @@ def apply_mult_for_candidate(
                 break
 
 
-def max_voted_candidate(vote_list: list[float]) -> tuple[float, int]:
+def max_voted_candidates(
+    vote_list: list[float], excluded: set[int]
+) -> tuple[float, list[int]]:
     max_votes: Optional[float] = None
-    max_vote_index: Optional[int] = None
+    max_vote_indexes: list[int] = []
     for index, vote_count in enumerate(vote_list):
-        if max_votes is None or vote_count > max_votes:
-            max_votes = vote_count
-            max_vote_index = index
+        if index not in excluded:
+            if max_votes is None or vote_count > max_votes:
+                max_votes = vote_count
+                max_vote_indexes = [index]
+            elif vote_count == max_votes:
+                max_vote_indexes.append(index)
 
     # Keeping type checker happy
     assert max_votes is not None
-    assert max_vote_index is not None
-    return max_votes, max_vote_index
+    return max_votes, max_vote_indexes
 
 
 def min_voted_candidates(
