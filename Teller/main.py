@@ -180,14 +180,24 @@ def count_votes(
                 print(f"{max_vote_indexes} won with {max_votes} votes!")
             else:
                 # Uh oh! Too many winners! This results in a tie
+                print(f"Too many winners! Declaring a tie with {max_vote_indexes}")
                 tied_winners.extend(max_vote_indexes)
         else:
             # Nobody won, removing the least voted candidate
             min_votes, min_vote_indexes = min_voted_candidates(current_votes, excluded)
-            excluded.update(min_vote_indexes)
-            print(
-                f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
-            )
+            if len(min_vote_indexes) + len(excluded) == candidate_count:
+                # The excluding these candidates would cause there to be no more candidates
+                # This means that we have a tie where no candidate has enough votes to meet quota
+                # Declare these candidates as tied and end
+                print(
+                    f"Couldn't find any winners! Declaring a tie with {min_vote_indexes}"
+                )
+                tied_winners.extend(min_vote_indexes)
+            else:
+                excluded.update(min_vote_indexes)
+                print(
+                    f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
+                )
 
         print(f"{votes=}")
 
