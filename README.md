@@ -28,6 +28,8 @@ I am aware that this is not the best way of doing this, and a better scaling met
 
 ```JSON
 {
+    # Plaintext name of the election
+    "election_name": str,
     # The minimum number of preferences a voter must provide
     # A zero, a negative value, or a value greater than or equal to number of candidates
     # requires all candidates to be preferenced

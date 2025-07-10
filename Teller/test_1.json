@@ -1,13 +1,22 @@
 {
+    "election_name": "Test Poll Please Ignore",
     "minimum_preferences": 0,
     "winner_amount": 1,
-    "candidates": [
-        ["Fluffybuns", "The Fluffybun party"],
-        ["Hardbottoms", "The Hardbottom party"],
-        ["Squishyfaces", "The Squishyface party"],
-        ["Gloopies", "The Gloopy party"],
-        ["Crunchies", "The Crunchy party"],
-        ["Evil", "The Evil party"]
+    "candidate_names": [
+        "Fluffybuns",
+        "Hardbottoms",
+        "Squishyfaces",
+        "Gloopies",
+        "Crunchies",
+        "Evil"
+    ],
+    "candidate_descriptions": [
+        "The Fluffybun party",
+        "The Hardbottom party",
+        "The Squishyface party",
+        "The Gloopy party",
+        "The Crunchy party",
+        "The Evil party"
     ],
     "randomise_order": false
 }
