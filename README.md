@@ -22,6 +22,8 @@ Teller is a back end application which actually implements the counting of a pre
 
 Both Poller and Teller use a pair of two files to store data about individual elections, `config.json`, and `votes.csv`. While running, Poller will produce a `Polls` folder in the working directory, and will create a folder for each new poll, which will be used to store each pair of files. `config.json` is a json file specifying the parameters of the vote, while `votes.csv` should be a csv file simply containing a list of votes in order.
 
+I am aware that this is not the best way of doing this, and a better scaling method would be to use an SQL server. However I'm doing this as a fun hobby project that was never intended to be used by more than a dozen people so I get to decide the requirements and what corners to cut to stay fun and easy to make :3. Others are welcome to fork this code and modify it to serve their own needs.
+
 `config.json` format:
 
 ```JSON

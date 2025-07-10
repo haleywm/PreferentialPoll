@@ -2,7 +2,6 @@ import argparse
 from pathlib import Path
 from typing import Optional, Any
 import json
-import time
 from poll_config import ConfigData, read_config
 from vote_reader import parse_vote_file, vote_count, vote
 from errors import VoteError
