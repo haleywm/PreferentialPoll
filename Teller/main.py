@@ -29,7 +29,7 @@ def main() -> None:
         "--verbose",
         "-v",
         action="store_true",
-        help="Print data.",
+        help="Print additional information before json file.",
     )
 
     args = parser.parse_args()
@@ -48,13 +48,15 @@ def main() -> None:
     with open(vote_file) as fp:
         votes = parse_vote_file(fp)
 
-    election_results = count_votes(votes, config, not args.ignore_invalid_votes)
+    election_results = count_votes(votes, config, not args.ignore_invalid_votes, args.verbose)
+    if args.verbose:
+        print("---")
 
     print(json.dumps(election_results))
 
 
 def count_votes(
-    votes: vote_count, config: ConfigData, raise_vote_error: bool
+    votes: vote_count, config: ConfigData, raise_vote_error: bool, verbose: bool
 ) -> dict[Any, Any]:
     # See ALGORITHM.md to see the logic + algo here
     winners: set[int] = set()
@@ -141,8 +143,9 @@ def count_votes(
     for to_remove in invalid_votes:
         del votes[to_remove]
 
-    print(f"{votes=}")
-    print(f"{quota=}")
+    if(verbose):
+        print(f"{votes=}")
+        print(f"{quota=}")
 
     # Done counting first preferences, now to go through and select a winner!
     # Keep going until we have enough winners, or a tie is found
@@ -176,10 +179,12 @@ def count_votes(
 
                 # Now add the winner to the excluded list for future votes
                 excluded.update(max_vote_indexes)
-                print(f"{max_vote_indexes} won with {max_votes} votes!")
+                if verbose:
+                    print(f"{max_vote_indexes} won with {max_votes} votes!")
             else:
                 # Uh oh! Too many winners! This results in a tie
-                print(f"Too many winners! Declaring a tie with {max_vote_indexes}")
+                if verbose:
+                    print(f"Too many winners! Declaring a tie with {max_vote_indexes}")
                 tied_winners.extend(max_vote_indexes)
         else:
             # Nobody won, removing the least voted candidate
@@ -188,25 +193,22 @@ def count_votes(
                 # The excluding these candidates would cause there to be no more candidates
                 # This means that we have a tie where no candidate has enough votes to meet quota
                 # Declare these candidates as tied and end
-                print(
-                    f"Couldn't find any winners! Declaring a tie with {min_vote_indexes}"
-                )
+                if verbose:
+                    print(
+                        f"Couldn't find any winners! Declaring a tie with {min_vote_indexes}"
+                    )
                 tied_winners.extend(min_vote_indexes)
             else:
                 excluded.update(min_vote_indexes)
-                print(
-                    f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
-                )
-
-        print(f"{votes=}")
-
-        print(f"{winners=}")
-        print(f"{excluded=}")
-        # time.sleep(1)
-        # TODO: Check for edge cases
-        # (Ties when there shouldn't be one)
-        # Current algorithm shouldn't hang as I'm always excluding
-        # 1 additional choice with each loop however
+                if verbose:
+                    print(
+                        f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
+                    )
+        
+        if verbose:
+            print(f"{votes=}")
+            print(f"{winners=}")
+            print(f"{excluded=}")
 
     # By this point we have a list of winners
     return {
