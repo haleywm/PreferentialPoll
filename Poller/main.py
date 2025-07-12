@@ -6,10 +6,14 @@ app = Quart(__name__)
 
 QuartSchema(app)
 
+
 @app.post("/ping")
-async def ping():
+async def ping() -> str:
     test = await request.get_data()
+    if isinstance(test, bytes):
+        test = test.decode()
     return f"Pong! {test}"
+
 
 @app.post("/submit_poll")
 @validate_request(PollData)
@@ -18,11 +22,13 @@ async def submit_poll(data: PollData) -> Response:
         validate_poll_data(data)
     except ValidationError as error:
         abort(Response(str(error), 400))
-    
+
     return Response("Good Jorb!", 200)
+
 
 def run() -> None:
     app.run()
+
 
 if __name__ == "__main__":
     run()
