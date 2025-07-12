@@ -48,7 +48,9 @@ def main() -> None:
     with open(vote_file) as fp:
         votes = parse_vote_file(fp)
 
-    election_results = count_votes(votes, config, not args.ignore_invalid_votes, args.verbose)
+    election_results = count_votes(
+        votes, config, not args.ignore_invalid_votes, args.verbose
+    )
     if args.verbose:
         print("---")
 
@@ -143,7 +145,7 @@ def count_votes(
     for to_remove in invalid_votes:
         del votes[to_remove]
 
-    if(verbose):
+    if verbose:
         print(f"{votes=}")
         print(f"{quota=}")
 
@@ -204,7 +206,7 @@ def count_votes(
                     print(
                         f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
                     )
-        
+
         if verbose:
             print(f"{votes=}")
             print(f"{winners=}")
