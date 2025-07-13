@@ -17,11 +17,9 @@ class PollData:
 
 @dataclass
 class PollResults:
-    count_success: bool
     winners: list[int]
-    runner_ups: list[int]
+    tied_winners: list[int]
     first_preferences: list[int]
-    candidates: list[tuple[str, str]]
 
 
 def validate_poll_data(data: PollData) -> None:
