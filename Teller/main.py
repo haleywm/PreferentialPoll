@@ -51,6 +51,8 @@ def main() -> None:
     election_results = count_votes(
         votes, config, not args.ignore_invalid_votes, args.verbose
     )
+    # If in verbose mode print a line of three dashes
+    # To indicate end of debug and beginning of output
     if args.verbose:
         print("---")
 
@@ -59,7 +61,7 @@ def main() -> None:
 
 def count_votes(
     votes: vote_count, config: ConfigData, raise_vote_error: bool, verbose: bool
-) -> dict[Any, Any]:
+) -> dict[str, list[int]]:
     # See ALGORITHM.md to see the logic + algo here
     winners: set[int] = set()
     tied_winners: list[int] = list()
