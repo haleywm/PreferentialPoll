@@ -9,7 +9,7 @@ DEFAULT_FOLDER = "polls"
 class PollManager:
     polls: dict[int, SinglePoll]
 
-    def __init__(self, folder=DEFAULT_FOLDER):
+    def __init__(self, folder: str = DEFAULT_FOLDER) -> None:
         # Create folder if doesn't exist
         folder_path = Path(folder)
         # This will raise error if path is taken by non folder object
@@ -37,3 +37,10 @@ class PollManager:
                     )
             else:
                 print(f"Warning: non poll file {child} is in poll folder")
+
+    def poll_list(self) -> list[dict[str, str]]:
+        result = []
+        for poll in self.polls.values():
+            result.append(poll.list_json())
+
+        return result

@@ -66,7 +66,7 @@ class SinglePoll:
                 if proc.returncode != 0:
                     # Error!
                     print(
-                        f"Error! Subprocess returned {proc.returncode}\nStderr: {proc_err}\nStdout: {proc_output}"
+                        f"Error! Subprocess returned {proc.returncode}\nStderr: {proc_err.decode()}\nStdout: {proc_output.decode()}"
                     )
                 else:
                     # Everything worked good!
@@ -91,6 +91,11 @@ class SinglePoll:
                 await f.write(",".join([str(x) for x in vote]) + "\n")
         # Now re-calculate votes
         await self._update_results()
+
+    def list_json(self) -> dict[str, str]:
+        # Return the relevant data from self to be represented in the poll list
+        # Currently just the poll name is used
+        return {"election_name": self.config.election_name}
 
     @classmethod
     def from_file(cls, config_path: Path, votes_path: Path) -> "SinglePoll":

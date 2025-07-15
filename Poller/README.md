@@ -19,4 +19,13 @@ As a safety precaution to prevent abuse, I will implement limits on the number o
 
 Poller supports the following endpoints using the following syntax:
 
-TODO
+```
+GET /list_polls
+
+Returns in following format:
+[
+    {
+        "election_name": str
+    }
+]
+```
