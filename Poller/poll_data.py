@@ -7,6 +7,7 @@ class ValidationError(Exception):
 
 @dataclass
 class PollData:
+    election_id: int
     election_name: str
     minimum_preferences: int
     winner_amount: int

@@ -10,6 +10,7 @@ from pathlib import Path
 from poll_data import PollData, PollResults
 
 TELLER_LOCATION = os.getenv("TELLER_LOCATION", "../Teller/main.py")
+MAX_RUNTIME = 60.0
 
 
 class SinglePoll:
@@ -26,15 +27,22 @@ class SinglePoll:
         self.votes_path = Path(votes_path).absolute()
         self.teller_path = Path(TELLER_LOCATION).absolute()
 
-    async def get_results(self) -> PollResults:
+    async def get_results(self, prefer_immediate: bool) -> PollResults:
         if self._current_results is None:
             # Results not yet calculated
             await self._update_results()
-        # Now wait until results are available
-        # (in case results are currently being calculated)
-        async with self._file_lock:
-            assert self._current_results is not None
-            return self._current_results
+
+        assert self._current_results is not None
+
+        if prefer_immediate:
+            # Get results immediately
+            result = self._current_results
+        else:
+            # Now wait until results are available
+            # (in case results are currently being calculated)
+            async with self._file_lock:
+                result = self._current_results
+        return result
 
     async def _update_results(self) -> None:
         # Call Teller and calculate the results of the election
@@ -51,17 +59,24 @@ class SinglePoll:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            proc_output, proc_err = await proc.communicate()
-            if proc.returncode != 0:
-                # Error!
-                print(
-                    f"Error! Subprocess returned {proc.returncode}\nStderr: {proc_err}\nStdout: {proc_output}"
+            try:
+                proc_output, proc_err = await asyncio.wait_for(
+                    proc.communicate(), MAX_RUNTIME
                 )
-            else:
-                # Everything worked good!
-                self._current_results = msgspec.json.decode(
-                    proc_output, type=PollResults
-                )
+                if proc.returncode != 0:
+                    # Error!
+                    print(
+                        f"Error! Subprocess returned {proc.returncode}\nStderr: {proc_err}\nStdout: {proc_output}"
+                    )
+                else:
+                    # Everything worked good!
+                    self._current_results = msgspec.json.decode(
+                        proc_output, type=PollResults
+                    )
+            except TimeoutError:
+                # The code has run for a solid minute, assume it got stuck and quit
+                proc.kill()
+                print(f"Error! Subprocess hung for {MAX_RUNTIME} seconds")
 
     async def add_vote(self, vote: list[int]) -> None:
         # Currently not asserting anything, assuming that's done elsewhere

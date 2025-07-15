@@ -1,5 +1,6 @@
 {
     "election_name": "Test Poll Please Ignore",
+    "election_id": 0,
     "minimum_preferences": 0,
     "winner_amount": 1,
     "candidate_names": [

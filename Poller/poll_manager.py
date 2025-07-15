@@ -7,7 +7,7 @@ DEFAULT_FOLDER = "polls"
 
 
 class PollManager:
-    polls: list[SinglePoll]
+    polls: dict[int, SinglePoll]
 
     def __init__(self, folder=DEFAULT_FOLDER):
         # Create folder if doesn't exist
@@ -15,7 +15,7 @@ class PollManager:
         # This will raise error if path is taken by non folder object
         folder_path.mkdir(exist_ok=True)
 
-        self.polls = list()
+        self.polls = dict()
 
         # Check for existing polls
         for child in folder_path.iterdir():
@@ -25,7 +25,12 @@ class PollManager:
                 config_path = child / "config.json"
                 votes_path = child / "votes.csv"
                 if config_path.is_file() and votes_path.is_file():
-                    self.polls.append(SinglePoll.from_file(config_path, votes_path))
+                    new_poll = SinglePoll.from_file(config_path, votes_path)
+                    if new_poll.config.election_id in self.polls:
+                        print(
+                            f"Warning: Multiple polls using ID {new_poll.config.election_id}"
+                        )
+                    self.polls[new_poll.config.election_id] = new_poll
                 else:
                     print(
                         f"Warning: folder {child} is in poll folder but doesn't contain poll files"
