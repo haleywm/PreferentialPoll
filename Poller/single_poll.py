@@ -7,7 +7,7 @@ import os
 import sys
 import asyncio
 from pathlib import Path
-from poll_data import PollData, PollResults
+from poll_data import PollData, PollResults, PollSummary
 
 TELLER_LOCATION = os.getenv("TELLER_LOCATION", "../Teller/main.py")
 MAX_RUNTIME = 60.0
@@ -92,10 +92,10 @@ class SinglePoll:
         # Now re-calculate votes
         await self._update_results()
 
-    def list_json(self) -> dict[str, str]:
+    def list_json(self) -> PollSummary:
         # Return the relevant data from self to be represented in the poll list
         # Currently just the poll name is used
-        return {"election_name": self.config.election_name}
+        return PollSummary(self.config.election_name)
 
     @classmethod
     def from_file(cls, config_path: Path, votes_path: Path) -> "SinglePoll":

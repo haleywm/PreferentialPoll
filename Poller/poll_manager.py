@@ -2,6 +2,7 @@
 # Poll Manager Class which manages various polls
 from pathlib import Path
 from single_poll import SinglePoll
+from poll_data import PollSummary
 
 DEFAULT_FOLDER = "polls"
 
@@ -38,8 +39,8 @@ class PollManager:
             else:
                 print(f"Warning: non poll file {child} is in poll folder")
 
-    def poll_list(self) -> list[dict[str, str]]:
-        result = []
+    def poll_list(self) -> list[PollSummary]:
+        result: list[PollSummary] = []
         for poll in self.polls.values():
             result.append(poll.list_json())
 

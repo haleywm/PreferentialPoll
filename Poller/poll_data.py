@@ -23,6 +23,11 @@ class PollResults:
     first_preferences: list[int]
 
 
+@dataclass
+class PollSummary:
+    election_name: str
+
+
 def validate_poll_data(data: PollData) -> None:
     # Not validating types
     # as those should be validated by schema whatever

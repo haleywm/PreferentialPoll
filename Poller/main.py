@@ -1,6 +1,6 @@
 from quart import Quart, jsonify, request, abort, Response
 from quart_schema import QuartSchema, validate_request, validate_response
-from poll_data import PollData, validate_poll_data, ValidationError
+from poll_data import PollData, PollSummary, validate_poll_data, ValidationError
 from poll_manager import PollManager
 
 app = Quart(__name__)
@@ -18,6 +18,7 @@ async def ping() -> str:
 
 
 @app.get("/get_polls")
+@validate_response(list[PollSummary])
 async def get_polls() -> Response:
     return jsonify(poll_manager.poll_list())
 
