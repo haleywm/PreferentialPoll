@@ -95,7 +95,7 @@ class SinglePoll:
     def list_json(self) -> PollSummary:
         # Return the relevant data from self to be represented in the poll list
         # Currently just the poll name is used
-        return PollSummary(self.config.election_name)
+        return PollSummary(self.config.election_name, self.config.election_id)
 
     @classmethod
     def from_file(cls, config_path: Path, votes_path: Path) -> "SinglePoll":

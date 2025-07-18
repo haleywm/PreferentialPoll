@@ -26,6 +26,7 @@ class PollResults:
 @dataclass
 class PollSummary:
     election_name: str
+    election_id: int
 
 
 def validate_poll_data(data: PollData) -> None:
