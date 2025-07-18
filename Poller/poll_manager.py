@@ -2,7 +2,7 @@
 # Poll Manager Class which manages various polls
 from pathlib import Path
 from single_poll import SinglePoll
-from poll_data import PollSummary, NewPoll, PollData
+from poll_data import PollSummary, NewPoll, PollData, Vote, ValidationError
 from dataclasses import asdict
 from asyncio import Lock
 
@@ -71,8 +71,58 @@ class PollManager:
 
         return result
 
+    def validate_vote(self, vote: Vote) -> None:
+        # Raise an exception if the vote is invalid
+        if vote.election_id not in self.polls:
+            raise ValidationError("Unknown poll")
+
+        election = self.polls[vote.election_id].config
+
+        if len(vote.preferences) == 0 or len(vote.preferences) > len(
+            election.candidate_names
+        ):
+            raise ValidationError("Invalid number of preferences")
+
+        if (
+            len(vote.preferences) < election.minimum_preferences
+            and election.minimum_preferences > 0
+        ):
+            raise ValidationError("Not enough preferences")
+
+        seen_preferences = set()
+        for pref in vote.preferences:
+            if pref < 0 or pref >= len(election.candidate_names):
+                raise ValidationError("Preference out of bounds")
+            if pref in seen_preferences:
+                raise ValidationError("Preferenced the same candidate multiple times")
+            seen_preferences.add(pref)
+
+    async def add_vote(self, vote: Vote) -> None:
+        # Assumes that vote has already been validated,
+        # invalid data or unexpected exceptions may result otherwise
+        election = self.polls[vote.election_id]
+        await election.add_vote(vote.preferences)
+
     def _get_next_id(self) -> int:
         return max(self.polls.keys()) + 1
 
     def _get_config_votes_paths(self, folder_path: Path) -> tuple[Path, Path]:
         return folder_path / "config.json", folder_path / "votes.csv"
+
+    @staticmethod
+    def validate_poll_data(data: NewPoll) -> None:
+        # Not validating types
+        # as those should be validated by schema whatever
+        if data.winner_amount < 1:
+            raise ValidationError("Invalid winner amount")
+
+        if len(data.candidate_names) < data.winner_amount:
+            raise ValidationError("Less candidates than winners")
+
+        if len(data.candidate_names) != len(data.candidate_descriptions):
+            raise ValidationError(
+                "Different number of candidate names and descriptions"
+            )
+
+        if data.minimum_preferences > len(data.candidate_names):
+            raise ValidationError("More preferences are required than are available")

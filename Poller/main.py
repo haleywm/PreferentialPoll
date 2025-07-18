@@ -2,9 +2,10 @@ from quart import Quart, jsonify, request, abort, Response
 from quart_schema import QuartSchema, validate_request, validate_response
 from poll_data import (
     NewPoll,
+    PollData,
     PollSummary,
     PollCreationInfo,
-    validate_poll_data,
+    Vote,
     ValidationError,
 )
 from poll_manager import PollManager
@@ -15,18 +16,21 @@ QuartSchema(app)
 poll_manager = PollManager()
 
 
-@app.post("/ping")
-async def ping() -> str:
-    test = await request.get_data()
-    if isinstance(test, bytes):
-        test = test.decode()
-    return f"Pong! {test}"
-
-
 @app.get("/get_polls")
 @validate_response(list[PollSummary])
 async def get_polls() -> list[PollSummary]:
     return poll_manager.poll_list()
+
+
+@app.get("/get_poll_details")  # pyright:ignore
+@validate_request(int)
+@validate_response(PollData)
+async def get_poll_details(poll_id: int) -> PollData:
+    try:
+        result = poll_manager.polls[poll_id]
+    except KeyError:
+        abort(Response("Invalid Poll ID", 400))
+    return result.config
 
 
 # Absolutely no clue why my code editor doesn't like this line
@@ -37,13 +41,25 @@ async def get_polls() -> list[PollSummary]:
 @validate_response(PollCreationInfo)
 async def submit_poll(data: NewPoll) -> PollCreationInfo:
     try:
-        validate_poll_data(data)
+        poll_manager.validate_poll_data(data)
     except ValidationError as error:
         abort(Response(str(error), 400))
 
     poll_id = await poll_manager.add_poll(data)
 
     return PollCreationInfo(poll_id)
+
+
+@app.post("/submit_vote")
+@validate_request(Vote)
+async def ping(new_vote: Vote) -> Response:
+    try:
+        poll_manager.validate_vote(new_vote)
+    except ValidationError as error:
+        abort(Response(str(error), 400))
+    await poll_manager.add_vote(new_vote)
+
+    return Response("OK", 200)
 
 
 def run() -> None:
