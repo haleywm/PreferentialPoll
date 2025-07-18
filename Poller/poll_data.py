@@ -5,15 +5,22 @@ class ValidationError(Exception):
     pass
 
 
+# This is data that the client can send
 @dataclass
-class PollData:
-    election_id: int
+class NewPoll:
     election_name: str
     minimum_preferences: int
     winner_amount: int
     candidate_names: list[str]
     candidate_descriptions: list[str]
     randomise_order: bool
+
+
+# PollData is the actually stored data class,
+# and just needs an added server decided election id
+@dataclass
+class PollData(NewPoll):
+    election_id: int
 
 
 @dataclass
@@ -29,7 +36,7 @@ class PollSummary:
     election_id: int
 
 
-def validate_poll_data(data: PollData) -> None:
+def validate_poll_data(data: NewPoll) -> None:
     # Not validating types
     # as those should be validated by schema whatever
     if data.winner_amount < 1:

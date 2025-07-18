@@ -1,6 +1,6 @@
 from quart import Quart, jsonify, request, abort, Response
 from quart_schema import QuartSchema, validate_request, validate_response
-from poll_data import PollData, PollSummary, validate_poll_data, ValidationError
+from poll_data import NewPoll, PollSummary, validate_poll_data, ValidationError
 from poll_manager import PollManager
 
 app = Quart(__name__)
@@ -24,14 +24,16 @@ async def get_polls() -> Response:
 
 
 @app.post("/submit_poll")
-@validate_request(PollData)
-async def submit_poll(data: PollData) -> Response:
+@validate_request(NewPoll)
+async def submit_poll(data: NewPoll) -> Response:
     try:
         validate_poll_data(data)
     except ValidationError as error:
         abort(Response(str(error), 400))
 
-    return Response("Good Jorb!", 200)
+    poll_id = await poll_manager.add_poll(data)
+
+    return jsonify({"new_id": poll_id})
 
 
 def run() -> None:
