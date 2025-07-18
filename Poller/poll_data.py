@@ -45,3 +45,8 @@ class PollCreationInfo:
 class Vote:
     election_id: int
     preferences: list[int]
+
+
+@dataclass
+class SpecificPoll:
+    election_id: int

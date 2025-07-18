@@ -6,6 +6,7 @@ from poll_data import (
     PollSummary,
     PollCreationInfo,
     Vote,
+    SpecificPoll,
     ValidationError,
 )
 from poll_manager import PollManager
@@ -22,10 +23,13 @@ async def get_polls() -> list[PollSummary]:
     return poll_manager.poll_list()
 
 
-@app.get("/get_poll_details")  # pyright:ignore
-@validate_request(int)
+# This would be a get
+# But I literally can't see any documentation for making a GET query in quart
+@app.post("/get_poll_details")  # pyright:ignore
+@validate_request(SpecificPoll)
 @validate_response(PollData)
-async def get_poll_details(poll_id: int) -> PollData:
+async def get_poll_details(data: SpecificPoll) -> PollData:
+    poll_id = data.election_id
     try:
         result = poll_manager.polls[poll_id]
     except KeyError:
@@ -52,12 +56,12 @@ async def submit_poll(data: NewPoll) -> PollCreationInfo:
 
 @app.post("/submit_vote")
 @validate_request(Vote)
-async def ping(new_vote: Vote) -> Response:
+async def submit_vote(data: Vote) -> Response:
     try:
-        poll_manager.validate_vote(new_vote)
+        poll_manager.validate_vote(data)
     except ValidationError as error:
         abort(Response(str(error), 400))
-    await poll_manager.add_vote(new_vote)
+    await poll_manager.add_vote(data)
 
     return Response("OK", 200)
 
