@@ -1,6 +1,12 @@
 from quart import Quart, jsonify, request, abort, Response
 from quart_schema import QuartSchema, validate_request, validate_response
-from poll_data import NewPoll, PollSummary, validate_poll_data, ValidationError
+from poll_data import (
+    NewPoll,
+    PollSummary,
+    PollCreationInfo,
+    validate_poll_data,
+    ValidationError,
+)
 from poll_manager import PollManager
 
 app = Quart(__name__)
@@ -19,13 +25,17 @@ async def ping() -> str:
 
 @app.get("/get_polls")
 @validate_response(list[PollSummary])
-async def get_polls() -> Response:
-    return jsonify(poll_manager.poll_list())
+async def get_polls() -> list[PollSummary]:
+    return poll_manager.poll_list()
 
 
-@app.post("/submit_poll")
+# Absolutely no clue why my code editor doesn't like this line
+# But the code works and mypy --strict doesn't complain
+# And a #type: ignore comment makes mypy complain about an unused ignore
+@app.post("/submit_poll")  # pyright: ignore
 @validate_request(NewPoll)
-async def submit_poll(data: NewPoll) -> Response:
+@validate_response(PollCreationInfo)
+async def submit_poll(data: NewPoll) -> PollCreationInfo:
     try:
         validate_poll_data(data)
     except ValidationError as error:
@@ -33,7 +43,7 @@ async def submit_poll(data: NewPoll) -> Response:
 
     poll_id = await poll_manager.add_poll(data)
 
-    return jsonify({"new_id": poll_id})
+    return PollCreationInfo(poll_id)
 
 
 def run() -> None:

@@ -36,6 +36,11 @@ class PollSummary:
     election_id: int
 
 
+@dataclass
+class PollCreationInfo:
+    election_id: int
+
+
 def validate_poll_data(data: NewPoll) -> None:
     # Not validating types
     # as those should be validated by schema whatever
@@ -47,3 +52,6 @@ def validate_poll_data(data: NewPoll) -> None:
 
     if len(data.candidate_names) != len(data.candidate_descriptions):
         raise ValidationError("Different number of candidate names and descriptions")
+
+    if data.minimum_preferences > len(data.candidate_names):
+        raise ValidationError("More preferences are required than are available")

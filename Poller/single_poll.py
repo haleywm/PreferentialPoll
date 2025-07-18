@@ -99,26 +99,28 @@ class SinglePoll:
         return PollSummary(self.config.election_name, self.config.election_id)
 
     async def write_files(self, force_write: bool = False) -> None:
-        # Create the necessary folders as needed
-        # Then create an empty votes file if needed
-        # And save the config file to output
-        folder_path = self.votes_path.parent
-        assert folder_path == self.config_path.parent
+        # Avoid fighting with other tools trying to write files before this is done
+        async with self._file_lock:
+            # Create the necessary folders as needed
+            # Then create an empty votes file if needed
+            # And save the config file to output
+            folder_path = self.votes_path.parent
+            assert folder_path == self.config_path.parent
 
-        # Make necessary directories but only if needed
-        # This should raise an error if folder_path is taken by a file
-        await aos.makedirs(folder_path, exist_ok=True)
+            # Make necessary directories but only if needed
+            # This should raise an error if folder_path is taken by a file
+            await aos.makedirs(folder_path, exist_ok=True)
 
-        # Make empty votes file if needed
-        if not await aos.path.exists(self.votes_path):
-            # Open file in append mode then immediatly closing seems to the best touch() equiv
-            async with aiofiles.open(self.votes_path, "a"):
-                pass
+            # Make empty votes file if needed
+            if not await aos.path.exists(self.votes_path):
+                # Open file in append mode then immediatly closing seems to the best touch equiv
+                async with aiofiles.open(self.votes_path, "a"):
+                    pass
 
-        # Save config if needed
-        if force_write or not await aos.path.exists(self.config_path):
-            async with aiofiles.open(self.config_path, "wb") as f:
-                await f.write(msgspec.json.encode(self.config))
+            # Save config if needed
+            if force_write or not await aos.path.exists(self.config_path):
+                async with aiofiles.open(self.config_path, "wb") as f:
+                    await f.write(msgspec.json.encode(self.config))
 
     @classmethod
     def from_file(cls, config_path: Path, votes_path: Path) -> "SinglePoll":
