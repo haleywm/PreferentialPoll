@@ -27,6 +27,7 @@ class SinglePoll:
         self.config_path = Path(config_path).absolute()
         self.votes_path = Path(votes_path).absolute()
         self.teller_path = Path(TELLER_LOCATION).absolute()
+        self._current_results = None
 
     async def get_results(self, prefer_immediate: bool) -> PollResults:
         if self._current_results is None:

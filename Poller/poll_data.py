@@ -37,11 +37,6 @@ class PollSummary:
 
 
 @dataclass
-class PollCreationInfo:
-    election_id: int
-
-
-@dataclass
 class Vote:
     election_id: int
     preferences: list[int]

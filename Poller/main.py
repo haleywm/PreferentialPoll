@@ -3,8 +3,8 @@ from quart_schema import QuartSchema, validate_request, validate_response
 from poll_data import (
     NewPoll,
     PollData,
+    PollResults,
     PollSummary,
-    PollCreationInfo,
     Vote,
     SpecificPoll,
     ValidationError,
@@ -31,10 +31,22 @@ async def get_polls() -> list[PollSummary]:
 async def get_poll_details(data: SpecificPoll) -> PollData:
     poll_id = data.election_id
     try:
-        result = poll_manager.polls[poll_id]
+        poll = poll_manager.polls[poll_id]
     except KeyError:
         abort(Response("Invalid Poll ID", 400))
-    return result.config
+    return poll.config
+
+
+@app.post("/get_poll_results")  # pyright:ignore
+@validate_request(SpecificPoll)
+@validate_response(PollResults)
+async def get_poll_results(data: SpecificPoll) -> PollResults:
+    poll_id = data.election_id
+    try:
+        poll = poll_manager.polls[poll_id]
+    except KeyError:
+        abort(Response("Invalid Poll ID", 400))
+    return await poll.get_results(True)
 
 
 # Absolutely no clue why my code editor doesn't like this line
@@ -42,8 +54,8 @@ async def get_poll_details(data: SpecificPoll) -> PollData:
 # And a #type: ignore comment makes mypy complain about an unused ignore
 @app.post("/submit_poll")  # pyright: ignore
 @validate_request(NewPoll)
-@validate_response(PollCreationInfo)
-async def submit_poll(data: NewPoll) -> PollCreationInfo:
+@validate_response(SpecificPoll)
+async def submit_poll(data: NewPoll) -> SpecificPoll:
     try:
         poll_manager.validate_poll_data(data)
     except ValidationError as error:
@@ -51,7 +63,7 @@ async def submit_poll(data: NewPoll) -> PollCreationInfo:
 
     poll_id = await poll_manager.add_poll(data)
 
-    return PollCreationInfo(poll_id)
+    return SpecificPoll(poll_id)
 
 
 @app.post("/submit_vote")
