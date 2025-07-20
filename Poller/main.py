@@ -58,10 +58,9 @@ async def get_poll_results(data: SpecificPoll) -> PollResults:
 async def submit_poll(data: NewPoll) -> SpecificPoll:
     try:
         poll_manager.validate_poll_data(data)
+        poll_id = await poll_manager.add_poll(data)
     except ValidationError as error:
         abort(Response(str(error), 400))
-
-    poll_id = await poll_manager.add_poll(data)
 
     return SpecificPoll(poll_id)
 

@@ -7,6 +7,7 @@ from dataclasses import asdict
 from asyncio import Lock
 
 DEFAULT_FOLDER = "polls"
+MAX_POLLS: int | None = 100
 
 
 class PollManager:
@@ -45,7 +46,9 @@ class PollManager:
                 print(f"Warning: non poll file {child} is in poll folder")
 
     async def add_poll(self, new_poll: NewPoll) -> int:
-        # As this function gets the next id, and later actuall reserves it
+        # As this function gets the next id, and later actually reserves it
+        if MAX_POLLS is not None and len(self.polls) >= MAX_POLLS:
+            raise ValidationError(f"Hit maximum limit of {MAX_POLLS} polls")
         # Lock this function to only run one at a time
         # To prevent race conditions where multiple add_poll instances get the same id
         async with self._manager_lock:
