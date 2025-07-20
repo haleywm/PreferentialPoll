@@ -97,11 +97,11 @@ class PollManager:
                 raise ValidationError("Preferenced the same candidate multiple times")
             seen_preferences.add(pref)
 
-    async def add_vote(self, vote: Vote) -> None:
+    def add_vote(self, vote: Vote) -> None:
         # Assumes that vote has already been validated,
         # invalid data or unexpected exceptions may result otherwise
         election = self.polls[vote.election_id]
-        await election.add_vote(vote.preferences)
+        election.add_vote(vote.preferences)
 
     def _get_next_id(self) -> int:
         return max(self.polls.keys()) + 1

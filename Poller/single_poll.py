@@ -20,13 +20,17 @@ class SinglePoll:
     config_path: Path
     votes_path: Path
     # Used to prevent simultaneous access of vote files
-    _file_lock = asyncio.Lock()
+    _file_lock: asyncio.Lock
+    # Use to store pending votes
+    _pending_votes: list[list[int]]
 
     def __init__(self, config: PollData, config_path: Path, votes_path: Path):
         self.config = config
         self.config_path = Path(config_path).absolute()
         self.votes_path = Path(votes_path).absolute()
         self.teller_path = Path(TELLER_LOCATION).absolute()
+        self._file_lock = asyncio.Lock()
+        self._pending_votes = []
         self._current_results = None
 
     async def get_results(self, prefer_immediate: bool) -> PollResults:
@@ -34,6 +38,7 @@ class SinglePoll:
             # Results not yet calculated
             await self._update_results()
 
+        # self._current_results should always not be none by the time update results is run
         assert self._current_results is not None
 
         if prefer_immediate:
@@ -47,52 +52,89 @@ class SinglePoll:
         return result
 
     async def _update_results(self) -> None:
-        # Call Teller and calculate the results of the election
-        # given the current config and votes
-        async with self._file_lock:
-            # Run process
-            # sys.executable gives an absolute path to the current python executable
-            # And all other paths were converted to absolute for safety
-            proc = await asyncio.create_subprocess_exec(
-                sys.executable,
-                self.teller_path,
-                self.config_path,
-                self.votes_path,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            try:
-                proc_output, proc_err = await asyncio.wait_for(
-                    proc.communicate(), MAX_RUNTIME
-                )
-                if proc.returncode != 0:
-                    # Error!
-                    print(
-                        f"Error! Subprocess returned {proc.returncode}\nStderr: {proc_err.decode()}\nStdout: {proc_output.decode()}"
-                    )
-                else:
-                    # Everything worked good!
-                    self._current_results = msgspec.json.decode(
-                        proc_output, type=PollResults
-                    )
-            except TimeoutError:
-                # The code has run for a solid minute, assume it got stuck and quit
-                proc.kill()
-                print(f"Error! Subprocess hung for {MAX_RUNTIME} seconds")
+        # Check if there are pending votes,
+        # and flush the pending votes to file if needed
+        # Then run Teller if needed
 
-    async def add_vote(self, vote: list[int]) -> None:
+        # Check if votes or no votes
+        votes_to_write: list[list[int]] = []
+        run_teller = True
+        if len(self._pending_votes) != 0:
+            # Flush list before awaiting to avoid race conditions
+            # around later _pending_votes modification
+            votes_to_write = self._pending_votes
+            self._pending_votes = []
+            await self._write_votes(votes_to_write)
+        else:
+            # No pending votes, check if no other votes
+            if self._current_results is None:
+                async with self._file_lock:
+                    if await aos.path.getsize(self.votes_path) == 0:
+                        # If there were no pending votes,
+                        # self._current_results is None,
+                        # and the votes file is empty,
+                        # then set a default full tie
+                        # and don't bother running run_teller
+                        candidate_count = len(self.config.candidate_names)
+                        self._current_results = PollResults(
+                            winners=[],
+                            tied_winners=list(range(candidate_count)),
+                            first_preferences=[0] * candidate_count,
+                        )
+                        run_teller = False
+
+        # Run Teller if needed
+        if run_teller:
+            # Call Teller and calculate the results of the election
+            # given the current config and votes
+            async with self._file_lock:
+                # Run process
+                # sys.executable gives an absolute path to the current python executable
+                # And all other paths were converted to absolute for safety
+                proc = await asyncio.create_subprocess_exec(
+                    sys.executable,
+                    self.teller_path,
+                    self.config_path,
+                    self.votes_path,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                try:
+                    proc_output, proc_err = await asyncio.wait_for(
+                        proc.communicate(), MAX_RUNTIME
+                    )
+                    if proc.returncode != 0:
+                        # Error!
+                        print(
+                            f"Error! Subprocess returned {proc.returncode}\nStderr: {proc_err.decode()}\nStdout: {proc_output.decode()}"
+                        )
+                    else:
+                        # Everything worked good!
+                        self._current_results = msgspec.json.decode(
+                            proc_output, type=PollResults
+                        )
+                except TimeoutError:
+                    # The code has run for a solid minute, assume it got stuck and quit
+                    proc.kill()
+                    print(f"Error! Subprocess hung for {MAX_RUNTIME} seconds")
+        # There is no need to check if more votes were added while the program was running
+        # Because add_vote will schedule more runs of _update_results for each new vote
+        # If _update_results runs with no pending votes (and self._current_results is not None)
+        # Then it will quit without doing anything or awaiting anything
+
+    def add_vote(self, vote: list[int]) -> None:
         # Currently not asserting anything, assuming that's done elsewhere
+        # Append new vote to the list
+        self._pending_votes.append(vote)
+        # Schedule a run of self._update_results() when there's time
+        asyncio.create_task(self._update_results())
+
+    async def _write_votes(self, votes_to_write: list[list[int]]) -> None:
         async with self._file_lock:
             # Append the new line to the votes file
             async with aiofiles.open(self.votes_path, "at") as f:
-                # I would like to formally apologise for the one liner
-                # I'm better than this but it's fun to write
-                # Convert the list into a CSV line in the same order
-                # That it was given in the argument
-                # And add a newline
-                await f.write(",".join([str(x) for x in vote]) + "\n")
-        # Now re-calculate votes
-        await self._update_results()
+                for vote in votes_to_write:
+                    await f.write(",".join([str(x) for x in vote]) + "\n")
 
     def list_json(self) -> PollSummary:
         # Return the relevant data from self to be represented in the poll list

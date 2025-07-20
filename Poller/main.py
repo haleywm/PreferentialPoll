@@ -73,7 +73,7 @@ async def submit_vote(data: Vote) -> Response:
         poll_manager.validate_vote(data)
     except ValidationError as error:
         abort(Response(str(error), 400))
-    await poll_manager.add_vote(data)
+    poll_manager.add_vote(data)
 
     return Response("OK", 200)
 
