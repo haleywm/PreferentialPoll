@@ -21,4 +21,4 @@ WORKDIR Poller
 # Allow proxies to communicate from any address
 # As this is meant to run behind a reverse proxy
 # Change this if you're not doing this
-CMD [ "uvicorn" "main:app" "--forwarded-allow-ips" "*" ]
+CMD [ "uvicorn", "main:app", "--forwarded-allow-ips", "*" ]
