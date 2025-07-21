@@ -82,6 +82,9 @@ class SinglePoll:
                             first_preferences=[0] * candidate_count,
                         )
                         run_teller = False
+            else:
+                # No new votes and we've already counted votes, do nothing
+                run_teller = False
 
         # Run Teller if needed
         if run_teller:
