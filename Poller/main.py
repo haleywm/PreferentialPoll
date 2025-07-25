@@ -26,7 +26,7 @@ if allowed_origin is not None:
         allow_methods=["GET", "POST"],
         max_age=600,
         allow_credentials=False,
-        allow_headers=[],
+        allow_headers=["Content-Type"],
         expose_headers=[],
         send_origin_wildcard=False,
     )
