@@ -14,6 +14,7 @@ msgspec==0.19.0
 priority==2.0.0
 pyhumps==3.8.0
 Quart==0.20.0
+quart-cors==0.8.0
 quart-schema==0.22.0
 uvicorn==0.35.0
 Werkzeug==3.1.3

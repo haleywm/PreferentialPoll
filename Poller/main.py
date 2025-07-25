@@ -1,5 +1,7 @@
 from quart import Quart, jsonify, request, abort, Response
 from quart_schema import QuartSchema, validate_request, validate_response
+from quart_cors import cors
+import os
 from poll_data import (
     NewPoll,
     PollData,
@@ -14,6 +16,21 @@ from poll_manager import PollManager
 app = Quart(__name__)
 
 QuartSchema(app)
+
+# Apply CORS if requested
+allowed_origin = os.getenv("ALLOWED_ORIGIN")
+if allowed_origin is not None:
+    app = cors(
+        app,
+        allow_origin=allowed_origin,
+        allow_methods=["GET", "POST"],
+        max_age=600,
+        allow_credentials=False,
+        allow_headers=[],
+        expose_headers=[],
+        send_origin_wildcard=False,
+    )
+
 poll_manager = PollManager()
 
 
