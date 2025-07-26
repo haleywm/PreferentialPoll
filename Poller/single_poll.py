@@ -12,6 +12,8 @@ from poll_data import PollData, PollResults, PollSummary
 
 TELLER_LOCATION = os.getenv("TELLER_LOCATION", "../Teller/main.py")
 MAX_RUNTIME = 60.0
+# 1 megabyte in bytes
+MAX_VOTE_SIZE = 1048576
 
 
 class SinglePoll:
@@ -134,10 +136,19 @@ class SinglePoll:
 
     async def _write_votes(self, votes_to_write: list[list[int]]) -> None:
         async with self._file_lock:
-            # Append the new line to the votes file
-            async with aiofiles.open(self.votes_path, "at") as f:
-                for vote in votes_to_write:
-                    await f.write(",".join([str(x) for x in vote]) + "\n")
+            # If the file is too big then just don't write the vote
+            # This would be bad if the code is meant to be used in a big context
+            # But eh
+
+            if await aos.path.getsize(self.votes_path) < MAX_VOTE_SIZE:
+                # Append the new line to the votes file
+                async with aiofiles.open(self.votes_path, "at") as f:
+                    for vote in votes_to_write:
+                        await f.write(",".join([str(x) for x in vote]) + "\n")
+            else:
+                print(
+                    f"File {self.votes_path} is bigger than the max size of {MAX_VOTE_SIZE} bytes! Dropping votes to prevent abuse"
+                )
 
     def list_json(self) -> PollSummary:
         # Return the relevant data from self to be represented in the poll list
