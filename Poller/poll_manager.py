@@ -68,9 +68,13 @@ class PollManager:
         return new_id
 
     def poll_list(self) -> list[PollSummary]:
+        # Return a list of keys in newest->oldest order
         result: list[PollSummary] = []
-        for poll in self.polls.values():
-            result.append(poll.list_json())
+        # There has got to be a better way to ensure that this list is ordered
+        # But I can't think of an easy way right now
+        # Maybe just a cache would help down the line
+        for poll_id in sorted(self.polls.keys(), reverse=True):
+            result.append(self.polls[poll_id].list_json())
 
         return result
 
