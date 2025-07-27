@@ -131,5 +131,10 @@ class PollManager:
                 "Different number of candidate names and descriptions"
             )
 
+        if len(data.candidate_names) < 2:
+            raise ValidationError(
+                "At least 2 candidates must be present, otherwise it's not much of a poll"
+            )
+
         if data.minimum_preferences > len(data.candidate_names):
             raise ValidationError("More preferences are required than are available")
