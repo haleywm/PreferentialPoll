@@ -138,3 +138,11 @@ class PollManager:
 
         if data.minimum_preferences > len(data.candidate_names):
             raise ValidationError("More preferences are required than are available")
+
+        # Check for duplicate names
+        # Not worried about duplicate descriptions
+        seen_names: set[str] = set()
+        for name in data.candidate_names:
+            if name in seen_names:
+                raise ValidationError(f"Candidate name {name} occurs multiple times")
+            seen_names.add(name)
