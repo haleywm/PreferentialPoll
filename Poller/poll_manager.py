@@ -90,9 +90,9 @@ class PollManager:
         ):
             raise ValidationError("Invalid number of preferences")
 
-        if (
-            len(vote.preferences) < election.minimum_preferences
-            and election.minimum_preferences > 0
+        if len(vote.preferences) < election.minimum_preferences or (
+            election.minimum_preferences <= 0
+            and len(vote.preferences) != len(election.candidate_names)
         ):
             raise ValidationError("Not enough preferences")
 
