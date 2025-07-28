@@ -111,7 +111,12 @@ class PollManager:
         election.add_vote(vote.preferences)
 
     def _get_next_id(self) -> int:
-        return max(self.polls.keys()) + 1
+        next_id: int
+        if len(self.polls) > 0:
+            next_id = max(self.polls.keys()) + 1
+        else:
+            next_id = 0
+        return next_id
 
     def _get_config_votes_paths(self, folder_path: Path) -> tuple[Path, Path]:
         return folder_path / "config.json", folder_path / "votes.csv"
