@@ -1,4 +1,4 @@
-from quart import Quart, jsonify, request, abort, Response
+from quart import Quart, abort, Response, send_file
 from quart_schema import QuartSchema, validate_request, validate_response
 from quart_cors import cors
 import os
@@ -92,6 +92,21 @@ async def submit_vote(data: Vote) -> Response:
     poll_manager.add_vote(data)
 
     return Response("OK", 200)
+
+
+@app.post("/download_all_votes")
+@validate_request(SpecificPoll)
+async def download_all_votes(data: SpecificPoll) -> Response:
+    # Download entire contents of relevant poll file
+    response: Response
+    if data.election_id in poll_manager.polls:
+        # Poll is present
+        # Read votes path from poll and use with quart's built-in send_file
+        response = await send_file(poll_manager.polls[data.election_id].votes_path)
+    else:
+        # Poll not found
+        response = Response("Poll not found", 404)
+    return response
 
 
 def run() -> None:
