@@ -49,8 +49,8 @@ class SinglePoll:
         else:
             # Now wait until results are available
             # (in case results are currently being calculated)
-            async with self._file_lock:
-                result = self._current_results
+            await self._update_results()
+            result = self._current_results
         return result
 
     async def _update_results(self) -> None:
