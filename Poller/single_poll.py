@@ -36,22 +36,15 @@ class SinglePoll:
         self._current_results = None
 
     async def get_results(self, prefer_immediate: bool) -> PollResults:
-        if self._current_results is None:
-            # Results not yet calculated
+        # Update results if they aren't present
+        # Or if we want to wait for a recalculation
+        if self._current_results is None or prefer_immediate is False:
             await self._update_results()
 
         # self._current_results should always not be none by the time update results is run
         assert self._current_results is not None
 
-        if prefer_immediate:
-            # Get results immediately
-            result = self._current_results
-        else:
-            # Now wait until results are available
-            # (in case results are currently being calculated)
-            await self._update_results()
-            result = self._current_results
-        return result
+        return self._current_results
 
     async def _update_results(self) -> None:
         # Check if there are pending votes,
@@ -82,6 +75,9 @@ class SinglePoll:
                             winners=[],
                             tied_winners=list(range(candidate_count)),
                             first_preferences=[0] * candidate_count,
+                            election_stages=[],
+                            votes_per_stage=[],
+                            quota=0,
                         )
                         run_teller = False
             else:
