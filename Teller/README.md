@@ -35,17 +35,18 @@ After processing input, if Teller was able to process the votes successfully, a 
     # Contains each step of the election counting process,
     # with each intermediary stage being a list containing "eliminated" or "elected",
     # followed by a list of eliminated/elected IDs
-    # Followed by a third list of transfer values
-    # This list will by empty for all stages except "elected"
+    # Followed by the transfer value for the votes
+    # This value will be 1.0 and can be ignored for all stages except "elected"
     # In which case it will contain the transfer value for each person who voted for the candidate
     # And the final stage being "success" or "tie"
     "election_stages": [
-        [str, [int, ...], [float, ...]],
+        [str, [int, ...], float],
         ...
     ],
     # Contains the total votes for each candidate after each stage of the election
     # With candidates who were eliminated receiving no votes
-    # and candidates who wn receiving no further votes
+    # and candidates who won receiving no further votes
+    # (Meaning 0 votes after the round that elected them)
     "votes_per_stage": [
         [float, ...],
         ...

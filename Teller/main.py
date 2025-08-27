@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, TypeAlias, Mapping, Sequence
 import json
 from poll_config import ConfigData, read_config
 from vote_reader import parse_vote_file, vote_count, vote
@@ -8,6 +8,10 @@ from errors import VoteError
 
 # Couldn't find an STD for this
 small_additive: float = 0.000000001
+
+JSON: TypeAlias = (
+    Mapping[str, "JSON"] | Sequence["JSON"] | str | int | float | bool | None
+)
 
 
 def main() -> None:
@@ -61,7 +65,7 @@ def main() -> None:
 
 def count_votes(
     votes: vote_count, config: ConfigData, raise_vote_error: bool, verbose: bool
-) -> dict[str, list[int]]:
+) -> dict[str, JSON]:
     # See ALGORITHM.md to see the logic + algo here
     winners: set[int] = set()
     tied_winners: list[int] = list()
@@ -82,6 +86,11 @@ def count_votes(
     quota: int = (total_votes // (config["winner_amount"] + 1)) + 1
     candidate_count: int = len(config["candidate_names"])
     first_preferences: list[int] = [0] * candidate_count
+
+    # Creating counters for election info for explanation purposes
+    election_stages: list[tuple[str, list[int], float]] = list()
+    votes_per_stage: list[list[float]] = list()
+
     # Counting first preferences
 
     # Prepare a list of invalid votes to remove if needed
@@ -163,6 +172,11 @@ def count_votes(
                     current_votes[possible_pref] += vote_amounts[0] * vote_amounts[1]
                     break
 
+        # Save the vote count for the detailed info
+        # (Don't strictly need to copy currently,
+        # but doing it keeps me safe in case I change the algorithm later and forget)
+        votes_per_stage.append(current_votes.copy())
+
         # Next, find the most voted for candidate
         max_votes, max_vote_indexes = max_voted_candidates(current_votes, excluded)
 
@@ -175,18 +189,23 @@ def count_votes(
                 winners.update(max_vote_indexes)
                 # If there are more winners needed, lets exclude the candidate
                 # And add transfer multipliers
+                transfer_value: float = 1.0
                 if len(winners) < config["winner_amount"]:
-                    transfer_value: float = (max_votes - quota) / max_votes
+                    transfer_value = (max_votes - quota) / max_votes
                     apply_mult_for_candidate(
                         votes, transfer_value, max_vote_indexes, excluded
                     )
 
                 # Now add the winner to the excluded list for future votes
                 excluded.update(max_vote_indexes)
+
+                # And save this result for this round
+                election_stages.append(("success", max_vote_indexes, transfer_value))
                 if verbose:
                     print(f"{max_vote_indexes} won with {max_votes} votes!")
             else:
                 # Uh oh! Too many winners! This results in a tie
+                election_stages.append(("tie", max_vote_indexes, 1.0))
                 if verbose:
                     print(f"Too many winners! Declaring a tie with {max_vote_indexes}")
                 tied_winners.extend(max_vote_indexes)
@@ -202,8 +221,10 @@ def count_votes(
                         f"Couldn't find any winners! Declaring a tie with {min_vote_indexes}"
                     )
                 tied_winners.extend(min_vote_indexes)
+                election_stages.append(("tie", min_vote_indexes, 1.0))
             else:
                 excluded.update(min_vote_indexes)
+                election_stages.append(("eliminated", min_vote_indexes, 1.0))
                 if verbose:
                     print(
                         f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
@@ -219,6 +240,9 @@ def count_votes(
         "winners": list(winners),
         "tied_winners": tied_winners,
         "first_preferences": first_preferences,
+        "election_stages": election_stages,
+        "votes_per_stage": votes_per_stage,
+        "quota": quota,
     }
 
 
