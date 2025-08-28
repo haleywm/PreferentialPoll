@@ -189,18 +189,21 @@ def count_votes(
                 winners.update(max_vote_indexes)
                 # If there are more winners needed, lets exclude the candidate
                 # And add transfer multipliers
-                transfer_value: float = 1.0
                 if len(winners) < config["winner_amount"]:
                     transfer_value = (max_votes - quota) / max_votes
                     apply_mult_for_candidate(
                         votes, transfer_value, max_vote_indexes, excluded
                     )
 
+                    # And save this result for this round
+                    election_stages.append(("elected", max_vote_indexes, transfer_value))
+                else:
+                    # No more winners needed
+                    election_stages.append(("success", max_vote_indexes, 1.0))
+
                 # Now add the winner to the excluded list for future votes
                 excluded.update(max_vote_indexes)
 
-                # And save this result for this round
-                election_stages.append(("success", max_vote_indexes, transfer_value))
                 if verbose:
                     print(f"{max_vote_indexes} won with {max_votes} votes!")
             else:
