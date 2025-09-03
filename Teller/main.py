@@ -2,6 +2,8 @@ import argparse
 from pathlib import Path
 from typing import Optional, TypeAlias, Mapping, Sequence
 import json
+import math
+import random
 from poll_config import ConfigData, read_config
 from vote_reader import parse_vote_file, vote_count, vote
 from errors import VoteError
@@ -184,7 +186,7 @@ def count_votes(
         if max_votes + small_additive >= quota:
             # Ding ding ding! We have a winner!
             # See how many winners
-            if len(max_vote_indexes) <= config["winner_amount"] - len(winners):
+            if len(max_vote_indexes) + len(winners) <= config["winner_amount"]:
                 # A good number of winners!
                 winners.update(max_vote_indexes)
                 # If there are more winners needed, lets exclude the candidate
@@ -196,7 +198,9 @@ def count_votes(
                     )
 
                     # And save this result for this round
-                    election_stages.append(("elected", max_vote_indexes, transfer_value))
+                    election_stages.append(
+                        ("elected", max_vote_indexes, transfer_value)
+                    )
                 else:
                     # No more winners needed
                     election_stages.append(("success", max_vote_indexes, 1.0))
@@ -213,25 +217,81 @@ def count_votes(
                     print(f"Too many winners! Declaring a tie with {max_vote_indexes}")
                 tied_winners.extend(max_vote_indexes)
         else:
-            # Nobody won, removing the least voted candidate
-            min_votes, min_vote_indexes = min_voted_candidates(current_votes, excluded)
-            if len(min_vote_indexes) + len(excluded) == candidate_count:
-                # The excluding these candidates would cause there to be no more candidates
-                # This means that we have a tie where no candidate has enough votes to meet quota
-                # Declare these candidates as tied and end
+            # Nobody won
+            # First: Check if the "Elected without a quota" or
+            # "Two Candidates tied for last vacancy" rules can apply
+            remaining_candidates = candidate_count - len(excluded)
+            winners_needed = config["winner_amount"] - len(winners)
+
+            if remaining_candidates == 2 and winners_needed == 1:
+                # Generate a set of the two remainders
+                remainders = list(set(range(candidate_count)).difference(excluded))
+                remainders_votes = [current_votes[i] for i in remainders]
+                winner_index: int
+                random_pick = False
+                if math.isclose(remainders_votes[0], remainders_votes[1]):
+                    # Votes are equal, randomly pick a winner
+                    winner_index = random.randint(0, 1)
+                    random_pick = True
+                    if verbose:
+                        print(
+                            f"Randomly picked {remainders[winner_index]} with only {remainders_votes[winner_index]} votes, under rule which allows two ties to be resolved by lot."
+                        )
+
+                elif remainders_votes[0] > remainders_votes[1]:
+                    # 0 has more votes, and wins without meeting quota
+                    winner_index = 0
+                else:
+                    # 1 has more votes, and wins without meeting quota
+                    winner_index = 1
+
+                if verbose and not random_pick:
+                    print(
+                        f"Elected {remainders[winner_index]} with only {remainders_votes[winner_index]} due to elected without a quota rule"
+                    )
+
+                winners.add(remainders[winner_index])
+                election_stages.append(
+                    (
+                        "randomlychosen" if random_pick else "electedwithoutquota",
+                        [remainders[winner_index]],
+                        1.0,
+                    )
+                )
+
+            elif remaining_candidates == winners_needed:
+                # We have the exact number of remaining candidates to fill the needed positions
+                # elect them without them meeting quota
+                remainders = list(set(range(candidate_count)).difference(excluded))
                 if verbose:
                     print(
-                        f"Couldn't find any winners! Declaring a tie with {min_vote_indexes}"
+                        f"Under the elected without quota rule, electing {remainders} without them meeting quota as there are equal remainders to positions needed"
                     )
-                tied_winners.extend(min_vote_indexes)
-                election_stages.append(("tie", min_vote_indexes, 1.0))
+                winners.update(remainders)
+                election_stages.append(("electedwithoutquota", remainders, 1.0))
             else:
-                excluded.update(min_vote_indexes)
-                election_stages.append(("eliminated", min_vote_indexes, 1.0))
-                if verbose:
-                    print(
-                        f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
-                    )
+                # Special rules don't fit
+                # Removing the least voted candidate(s)
+                min_votes, min_vote_indexes = min_voted_candidates(
+                    current_votes, excluded
+                )
+                if len(min_vote_indexes) + len(excluded) == candidate_count:
+                    # The excluding these candidates would cause there to be no more candidates
+                    # This means that we have a tie where no candidate has enough votes to meet quota
+                    # Declare these candidates as tied and end
+                    if verbose:
+                        print(
+                            f"Couldn't find any winners! Declaring a tie with {min_vote_indexes}"
+                        )
+                    tied_winners.extend(min_vote_indexes)
+                    election_stages.append(("tie", min_vote_indexes, 1.0))
+                else:
+                    excluded.update(min_vote_indexes)
+                    election_stages.append(("eliminated", min_vote_indexes, 1.0))
+                    if verbose:
+                        print(
+                            f"{min_vote_indexes} have been excluded for only having {min_votes} votes"
+                        )
 
         if verbose:
             print(f"{votes=}")

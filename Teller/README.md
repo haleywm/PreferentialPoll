@@ -38,7 +38,7 @@ After processing input, if Teller was able to process the votes successfully, a 
     # Followed by the transfer value for the votes
     # This value will be 1.0 and can be ignored for all stages except "elected"
     # In which case it will contain the transfer value for each person who voted for the candidate
-    # And the final stage being "success" or "tie"
+    # And the final stage being "success", "electedwithoutquota", "randomlychosen" or "tie"
     "election_stages": [
         [str, [int, ...], float],
         ...
