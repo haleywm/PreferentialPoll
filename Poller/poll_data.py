@@ -30,7 +30,7 @@ class PollResults:
     first_preferences: list[int]
     election_stages: list[tuple[str, list[int], float]]
     votes_per_stage: list[list[float]]
-    quota: int
+    quota: float
 
 
 @dataclass

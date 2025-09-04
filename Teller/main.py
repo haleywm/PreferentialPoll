@@ -85,7 +85,7 @@ def count_votes(
     # I then add 1 to the result anyway
     # So the quota will always be slightly greater than the fraction
     # Even if it divides cleanly
-    quota: int = (total_votes // (config["winner_amount"] + 1)) + 1
+    quota: float = (total_votes / (config["winner_amount"] + 1)) + 1
     candidate_count: int = len(config["candidate_names"])
     first_preferences: list[int] = [0] * candidate_count
 
